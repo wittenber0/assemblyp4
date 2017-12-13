@@ -33,7 +33,152 @@ void transpose_skip2(int M, int N, int A[N][M], int B[M][N])
 }
 
 char transpose_submit_desc[] = "Transpose submission";
-void transpose_submit(int M, int N, int A[N][M], int B[M][N])
+void transpose_submit(int M, int N, int A[N][M], int B[M][N]){
+
+
+	int block_r, block_c, r, c;
+
+	if (N == 32){
+		for (block_r = 0; block_r < 4; block_r++){
+			for (block_c = 0; block_c < 4; block_c++){
+				for (r = block_r * 8; r < block_r * 8 + 8; r++){
+					if (block_r == block_c){
+						B[r][r] = A[r][r];
+					}
+					for (c = block_c * 8; c < block_c * 8 + 8; c++){
+						if (r != c){
+							B[r][c] = A[c][r];
+						}
+					}
+				}
+			}
+		}
+	}else if (N == 64){
+		int r0, r1, r2, r3;
+		for (block_r = 0; block_r < 8; block_r++){
+			for (block_c = 0; block_c < 8; block_c++){
+				for (c = block_c * 8; c < block_c * 8 + 4; c++){
+					for (r = block_r * 8; r < block_r * 8 + 4; r++){
+						if (r != c){
+							B[r][c] = A[c][r];
+						}
+					}
+					if (block_r == block_c){
+						B[c][c] = A[c][c];
+					}
+				}
+				for (c = block_c * 8 + 4; c < block_c * 8 + 8; c++){
+					for (r = block_r * 8; r < block_r * 8 + 4; r++){
+						if (r != c - 4){
+							B[r][c] = A[c - 4][r + 4];
+						}
+					}
+					if (block_c == block_r){
+						B[c - 4][c] = A[c - 4][c];
+					}
+				}
+				r = block_r * 8;
+				c = block_c * 8 + 4;
+				r0 = B[r][c];
+				r1 = B[r][c + 1];
+				r2 = B[r][c + 2];
+				r3 = B[r][c + 3];
+				for (c = block_c * 8 + 4; c < block_c * 8 + 8; c++){
+					B[r][c] = A[c][r];
+				}
+				r = block_r * 8 + 4;
+				c = block_c * 8;
+				B[r][c] = r0;
+				B[r][c + 1] = r1;
+				B[r][c + 2] = r2;
+				B[r][c + 3] = r3;
+
+				r = block_r * 8 + 1;
+				c = block_c * 8 + 4;
+				r0 = B[r][c];
+				r1 = B[r][c + 1];
+				r2 = B[r][c + 2];
+				r3 = B[r][c + 3];
+				for (c = block_c * 8 + 4; c < block_c * 8 + 8; c++){
+					B[r][c] = A[c][r];
+				}
+				r = block_r * 8 + 5;
+				c = block_c * 8;
+				B[r][c] = r0;
+				B[r][c + 1] = r1;
+				B[r][c + 2] = r2;
+				B[r][c + 3] = r3;
+
+				r = block_r * 8 + 2;
+				c = block_c * 8 + 4;
+				r0 = B[r][c];
+				r1 = B[r][c + 1];
+				r2 = B[r][c + 2];
+				r3 = B[r][c + 3];
+				for (c = block_c * 8 + 4; c < block_c * 8 + 8; c++){
+					B[r][c] = A[c][r];
+				}
+				r = block_r * 8 + 6;
+				c = block_c * 8;
+				B[r][c] = r0;
+				B[r][c + 1] = r1;
+				B[r][c + 2] = r2;
+				B[r][c + 3] = r3;
+
+				r = block_r * 8 + 3;
+				c = block_c * 8 + 4;
+				r0 = B[r][c];
+				r1 = B[r][c + 1];
+				r2 = B[r][c + 2];
+				r3 = B[r][c + 3];
+				for (c = block_c * 8 + 4; c < block_c * 8 + 8; c++){
+					B[r][c] = A[c][r];
+				}
+				r = block_r * 8 + 7;
+				c = block_c * 8;
+				B[r][c] = r0;
+				B[r][c + 1] = r1;
+				B[r][c + 2] = r2;
+				B[r][c + 3] = r3;
+
+				for (r = block_r * 8 + 4; r < block_r * 8 + 8; r++){
+					if (block_c == block_r){
+						B[r][r] = A[r][r];
+					}
+					for (c = block_c * 8 + 4; c < block_c * 8 + 8; c++){
+						if (r != c){
+							B[r][c] = A[c][r];
+						}
+					}
+				}
+			}
+		}
+	}else{
+		int temp;
+		int d;
+		int blockSize = 16;
+		for (int blockForCol = 0; blockForCol < M; blockForCol += blockSize)	{
+			for (int blockForRow = 0; blockForRow < N; blockForRow += blockSize)	{
+				for(r = blockForRow; (r < N) && (r < blockForRow + blockSize); r++){
+					for(c = blockForCol; (c < M) && (c < blockForCol + blockSize); c++){
+						if (r != c){
+							B[c][r] = A[r][c];
+						}else{
+							temp = A[r][c];
+							d = r;
+						}
+					}
+					if(blockForRow == blockForCol){
+						B[d][d] = temp;
+					}
+				}
+			}
+		}
+	}
+}
+
+char transpose_submit2_desc[] = "Transpose submission2";
+void transpose_submit2(int M, int N, int A[N][M], int B[M][N])
 {
 	int blockSize; //variable for size of block, used in each of the iterations, N ==32, N ==63 and the else
 		int blockForRow, blockForCol; //to iterate over blocks, user in outer loops
@@ -721,4 +866,6 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N])
 	}
 	return 1;
 }
+
+
 
